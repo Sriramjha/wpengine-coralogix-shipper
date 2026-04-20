@@ -90,15 +90,24 @@ Maintainer: [Sriramjha](https://github.com/Sriramjha).
    Use SSH instead if you prefer:  
    `git remote add origin git@github.com:Sriramjha/wpengine-coralogix-shipper.git`
 
-### Option B — GitHub CLI (`gh`)
+### Option B — GitHub CLI (`gh`) + helper script
+
+One-time: `brew install gh` then `gh auth login`.
+
+Then from this folder:
 
 ```bash
-cd wpengine-coralogix-shipper
-gh auth login
-gh repo create Sriramjha/wpengine-coralogix-shipper --public --source=. --remote=origin --push
+chmod +x publish_to_github.sh
+./publish_to_github.sh
 ```
 
-If `origin` already exists, use `gh repo create ... --push` after setting the remote, or remove the duplicate remote first.
+This creates `Sriramjha/wpengine-coralogix-shipper` if it does not exist and runs `git push -u origin main`.
+
+Manual equivalent:
+
+```bash
+gh repo create Sriramjha/wpengine-coralogix-shipper --public --source=. --remote=origin --push
+```
 
 **Do not commit `.env` or `wpengine_coralogix_state.json`** — they are listed in `.gitignore`.
 
