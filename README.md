@@ -103,6 +103,8 @@ chmod +x publish_to_github.sh
 
 This creates `Sriramjha/wpengine-coralogix-shipper` if it does not exist and runs `git push -u origin main`.
 
+**Headless / CI:** set `GH_TOKEN` to a classic PAT with `repo` scope and run the same script; it uses the GitHub API to create the repository, then `git push` over SSH.
+
 Manual equivalent:
 
 ```bash
