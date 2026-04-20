@@ -70,20 +70,35 @@ Ensure `.env` is readable only by the service user (`chmod 600 .env`).
 
 ## Publishing this as a GitHub repo
 
-1. Create an empty repository on GitHub named `wpengine-coralogix-shipper` under your account (no README/license if you are pushing this project’s files).
-2. From this folder:
+Maintainer: [Sriramjha](https://github.com/Sriramjha).
+
+### Option A — GitHub website + `git push`
+
+1. Create a **new empty** repository: [github.com/new](https://github.com/new)  
+   - **Owner:** Sriramjha  
+   - **Repository name:** `wpengine-coralogix-shipper`  
+   - Public (or private). **Do not** add a README, `.gitignore`, or license (this repo already has them).
+2. From this folder (after `git init` / first commit if needed):
 
    ```bash
    cd wpengine-coralogix-shipper
-   git init
-   git add .
-   git commit -m "Initial import: WP Engine to Coralogix shipper"
    git branch -M main
    git remote add origin https://github.com/Sriramjha/wpengine-coralogix-shipper.git
    git push -u origin main
    ```
 
-3. Maintainer: [Sriramjha on GitHub](https://github.com/Sriramjha).
+   Use SSH instead if you prefer:  
+   `git remote add origin git@github.com:Sriramjha/wpengine-coralogix-shipper.git`
+
+### Option B — GitHub CLI (`gh`)
+
+```bash
+cd wpengine-coralogix-shipper
+gh auth login
+gh repo create Sriramjha/wpengine-coralogix-shipper --public --source=. --remote=origin --push
+```
+
+If `origin` already exists, use `gh repo create ... --push` after setting the remote, or remove the duplicate remote first.
 
 **Do not commit `.env` or `wpengine_coralogix_state.json`** — they are listed in `.gitignore`.
 
