@@ -1,0 +1,8 @@
+.venv/
+venv/
+.env
+*.pyc
+__pycache__/
+wpengine_coralogix_state.json
+*.tmp
+.DS_Store
