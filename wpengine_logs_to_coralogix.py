@@ -23,7 +23,7 @@ from typing import Any
 
 import requests
 
-API_BASE = "https://api.wpengineapi.com/v1"
+DEFAULT_API_BASE = "https://api.wpengineapi.com/v1"
 
 
 # --- Coralogix singles mapping (same shape as common Coralogix HTTP examples) ---
@@ -200,6 +200,26 @@ def release_lock(fh: object | None) -> None:
         fh.close()
 
 
+def _logs_fetch_url(*, install_id: str, log_type: str, limit: int, offset: int) -> str:
+    """
+    Resolve URL for log lines. Default uses the public API host; WP Engine's documented
+    Hosting Platform API does not currently expose this path (see README troubleshooting).
+    Override with WPE_LOGS_URL, e.g. https://example.com/v1/installs/{install_id}/logs
+    """
+    custom = os.environ.get("WPE_LOGS_URL", "").strip()
+    if custom:
+        api_base = os.environ.get("WPE_API_BASE", DEFAULT_API_BASE).rstrip("/")
+        return custom.format(
+            install_id=install_id,
+            log_type=log_type,
+            limit=limit,
+            offset=offset,
+            api_base=api_base,
+        )
+    base = os.environ.get("WPE_API_BASE", DEFAULT_API_BASE).rstrip("/")
+    return f"{base}/installs/{install_id}/logs"
+
+
 def fetch_logs_page(
     sess: requests.Session,
     *,
@@ -209,7 +229,9 @@ def fetch_logs_page(
     offset: int,
     limit: int,
 ) -> list[dict[str, Any]]:
-    url = f"{API_BASE}/installs/{install_id}/logs"
+    url = _logs_fetch_url(
+        install_id=install_id, log_type=log_type, limit=limit, offset=offset
+    )
     headers = {
         "Authorization": auth,
         "Accept": "application/json",
@@ -230,7 +252,20 @@ def fetch_logs_page(
             continue
         backoff = 1.0
         if r.status_code != 200:
-            raise RuntimeError(f"WP Engine API {r.status_code}: {r.text}")
+            msg = r.text or ""
+            if r.status_code == 404 and "endpoint does not exist" in msg.lower():
+                raise RuntimeError(
+                    "WP Engine API 404: this logs URL is not a registered route on the API host "
+                    "(gateway message: requested endpoint does not exist). The public Hosting "
+                    "Platform API documented at "
+                    "https://developers.wpengine.com/docs/managed-hosting-platform/api/reference/ "
+                    "does not include GET /installs/{install_id}/logs, so this shipper cannot "
+                    "fetch access/error lines until WP Engine exposes a supported logs endpoint "
+                    "or you set WPE_LOGS_URL to a URL your account can use. "
+                    "Confirm WPE_INSTALL_ID is the install UUID from GET /v1/installs (not the "
+                    f"short name). Request URL was: {url!r}. Raw response: {msg}"
+                )
+            raise RuntimeError(f"WP Engine API {r.status_code}: {msg}")
         data = r.json()
         return list(data.get("results", data.get("data", [])))
 

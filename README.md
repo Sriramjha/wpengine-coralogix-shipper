@@ -9,7 +9,7 @@ Small Python utility that **polls the WP Engine logs API** (access / error) and 
 ## Prerequisites
 
 - **Python 3.10+**
-- WP Engine **API credentials** and **install name** (per environment).
+- WP Engine **API credentials** and **install UUID** (`id` from `GET https://api.wpengineapi.com/v1/installs`).
 - Coralogix **Send-Your-Data** API key and **domain** (e.g. `eu2.coralogix.com`).
 
 ## Quick start (copy-paste)
@@ -46,7 +46,9 @@ set -a && source .env && set +a
 |----------|----------|-------------|
 | `WPE_API_USER` | yes | WP Engine API username |
 | `WPE_API_PASSWORD` | yes | WP Engine API password |
-| `WPE_INSTALL_ID` | yes | Install name from WP Engine portal |
+| `WPE_INSTALL_ID` | yes | Install **UUID** (see `GET /v1/installs`); not the short install name |
+| `WPE_API_BASE` | no | Default `https://api.wpengineapi.com/v1` |
+| `WPE_LOGS_URL` | no | Override log fetch URL template; may include `{install_id}`, `{log_type}`, `{limit}`, `{offset}`, `{api_base}` |
 | `CORALOGIX_PRIVATE_KEY` | yes | Coralogix Send-Your-Data API key |
 | `CORALOGIX_DOMAIN` | yes | e.g. `eu2.coralogix.com` (no `https://`) |
 | `CX_APPLICATION_NAME` | no | Default `WPENGINE` |
@@ -67,3 +69,59 @@ Point `STATE_PATH` and `LOCK_PATH` at persistent paths (example):
 ```
 
 Ensure `.env` is readable only by the service user (`chmod 600 .env`).
+
+## Publishing this as a GitHub repo
+
+Maintainer: [Sriramjha](https://github.com/Sriramjha).
+
+### Option A — GitHub website + `git push`
+
+1. Create a **new empty** repository: [github.com/new](https://github.com/new)  
+   - **Owner:** Sriramjha  
+   - **Repository name:** `wpengine-coralogix-shipper`  
+   - Public (or private). **Do not** add a README, `.gitignore`, or license (this repo already has them).
+2. From this folder (after `git init` / first commit if needed):
+
+   ```bash
+   cd wpengine-coralogix-shipper
+   git branch -M main
+   git remote add origin https://github.com/Sriramjha/wpengine-coralogix-shipper.git
+   git push -u origin main
+   ```
+
+   Use SSH instead if you prefer:  
+   `git remote add origin git@github.com:Sriramjha/wpengine-coralogix-shipper.git`
+
+### Option B — GitHub CLI (`gh`) + helper script
+
+One-time: `brew install gh` then `gh auth login`.
+
+Then from this folder:
+
+```bash
+chmod +x publish_to_github.sh
+./publish_to_github.sh
+```
+
+This creates `Sriramjha/wpengine-coralogix-shipper` if it does not exist and runs `git push -u origin main`.
+
+**Headless / CI:** set `GH_TOKEN` to a classic PAT with `repo` scope and run the same script; it uses the GitHub API to create the repository, then `git push` over SSH.
+
+Manual equivalent:
+
+```bash
+gh repo create Sriramjha/wpengine-coralogix-shipper --public --source=. --remote=origin --push
+```
+
+**Do not commit `.env` or `wpengine_coralogix_state.json`** — they are listed in `.gitignore`.
+
+## Troubleshooting
+
+- **404** with body like `The requested endpoint does not exist`: the URL the shipper calls (`{WPE_API_BASE}/installs/{id}/logs` by default) is **not part of the public WP Engine Hosting Platform API** described in the [API reference](https://developers.wpengine.com/docs/managed-hosting-platform/api/reference/). Access and error logs are available in the User Portal, plugin, and (for some products) other flows—but there is no documented `GET /installs/{install_id}/logs` in that API today. This repository assumed such an endpoint; you will need **WP Engine to provide a supported logs API** for your account, or **set `WPE_LOGS_URL`** to an HTTP endpoint you control that returns JSON with a `results` or `data` array of objects (same query params: `type`, `limit`, `offset`), or replace this approach (for example SFTP log tail, or portal exports).
+- **401/403 from WP Engine**: verify API access in the WP Engine portal and credentials in `.env`.
+- **429**: the script backs off; shorten the cron interval or lower `MAX_RECORDS_PER_RUN` if needed.
+- **Coralogix ingest errors**: confirm `CORALOGIX_DOMAIN` matches your Coralogix region and the key is a **Send-Your-Data** key.
+
+## License
+
+Add a `LICENSE` file of your choice when you publish the repository.
